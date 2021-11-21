@@ -1,0 +1,31 @@
+OSNOVA:
+
+ - Uvod
+
+ - umela inteligence
+ 
+ - strojove uceni (rozdeleni)
+ 	https://dspace.vutbr.cz/bitstream/handle/11012/54905/final-thesis.pdf?sequence=6&isAllowed=y
+
+ - data mining 
+ - statistika/pravdepodobnost, 
+ - optimalizace
+
+ - multiagentni systemy(co to je), pojem agent(vysvetleni, popis agenta, rozdeleni agentu, interakce, prostredi) 
+	https://wiki.control.fel.cvut.cz/mediawiki/images/4/4e/Bp_2013_slansky_ondrej.pdf
+
+ 
+- 4 PARADIGMA:
+- Genetické algoritmy - Honzik 
+	- terminologie
+	- princip, ideove schema
+	- operatory: kodovani, krizeni, mutace, selekce, fitness
+	- parametry GA
+	- vyuziti v realnem zivote
+
+ - Symbolická reprezentace znalostí
+	- uceni
+ - Pravděpodobnost
+
+ - Umělé neuronové sítě
+
