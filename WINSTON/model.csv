@@ -1,0 +1,1 @@
+"must-be-consists_of(arch,pillar1)","must-be-consists_of(arch,pillar2)","must-be-consists_of(arch,roof)","must-be-has_shape(pillar1,polygon)","must-be-has_shape(pillar2,polygon)","must-be-has_shape(roof,polygon)","must-be-supports(pillar1,roof)","must-be-supports(pillar2,roof)","must-not-be-next_to(pillar1,pillar2)"
