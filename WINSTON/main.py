@@ -1,9 +1,14 @@
 import csv
 import re
+import os.path
+import xml.etree.cElementTree as ET
 
 polygon = ['pyramid', 'block', 'cylinder']
 
-exclude_link_dict = {'color': ['red', 'black', 'yellow']}
+generalization_tree = {'polygon-pillar': ['block', 'cylinder', 'pyramid', 'cube'],
+                       'polygon-roof': ['pyramid', 'block', 'cube', 'cylinder']}
+
+exclude_link_dict = {}
 
 model = []
 
@@ -21,6 +26,15 @@ class Link:
 
 
 def load_examples():
+    tree = ET.parse('exclude_links.xml')
+    root = tree.getroot()
+
+    for child in root:
+        values = []
+        for e in child:
+            values.append(e.text)
+        exclude_link_dict[child.tag] = values
+
     with open("example.csv", "r") as file:
         reader = csv.reader(file, delimiter=';')
         return list(reader)
@@ -44,7 +58,7 @@ def find_positive_example(examples):
 
             print('A POSITIVE EXAMPLE WAS FOUND:')
             print(model)
-
+            print("\n")
             return model
 
 
@@ -105,7 +119,8 @@ def compare_models(example):
 def exclude_values(link, example_link_value):
 
     for ex in exclude_link_dict:
-        if ex in link.property_name:
+        ex_split = ex.split('-')
+        if ex_split[0] in link.property_name and ex_split[1] in link.property_name:
             if link.property_value in exclude_link_dict[ex] and example_link_value in exclude_link_dict[ex]:
                 return True
 
@@ -154,8 +169,7 @@ def edit_interval(l1, example):
         if l1.property_name in link:  # Jestlize vlastnost nachazi v linku prikladu
             e_property_value = link_get_value(link)  # Ziska hodnotu linku z prikladu
 
-            if values[
-                1] < e_property_value:  # Porovnani hodnot z intervalu values[0] a values[0] modelu a podle toho upravi novy interval
+            if values[1] < e_property_value:  # Porovnani hodnot z intervalu values[0] a values[0] modelu a podle toho upravi novy interval
                 model = list(map(lambda x: x.replace(l1.link,
                                                      'must-be-' + l1.property_name + ',' + values[
                                                          0] + '-' + e_property_value + ')'), model))
@@ -225,6 +239,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    print('A GENERAL MODEL WAS FOUND!')
-    save_model()
+    if os.path.isfile('model.csv'):
+        print('MODEL IS ALREADY CREATED')
+    else:
+        main()
+        print('A GENERAL MODEL WAS FOUND!')
+        save_model()
