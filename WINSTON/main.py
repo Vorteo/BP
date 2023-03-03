@@ -150,7 +150,7 @@ def make_interval(l1, example):
         if l1.property_name in link:
             e_property_value = link_get_value(link)
 
-            if l1.property_value < e_property_value:  # Nastaveni intervalu, podle velikosti hodnot
+            if l1.property_value < e_property_value:  
                 model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' + l1.property_value
                                                      + '-' + e_property_value + ')'), model))
             else:
@@ -166,10 +166,10 @@ def edit_interval(l1, example):
     values = l1.property_value.split('-')
 
     for link in example:
-        if l1.property_name in link:  # Jestlize vlastnost nachazi v linku prikladu
-            e_property_value = link_get_value(link)  # Ziska hodnotu linku z prikladu
+        if l1.property_name in link:  
+            e_property_value = link_get_value(link)  
 
-            if values[1] < e_property_value:  # Porovnani hodnot z intervalu values[0] a values[0] modelu a podle toho upravi novy interval
+            if values[1] < e_property_value:  
                 model = list(map(lambda x: x.replace(l1.link,
                                                      'must-be-' + l1.property_name + ',' + values[
                                                          0] + '-' + e_property_value + ')'), model))
@@ -183,34 +183,34 @@ def edit_interval(l1, example):
 def main():
     global model
 
-    examples = load_examples()                                       # Nacitani prikladu ze souboru
-    model = find_positive_example(examples)                          # Nalezeni pocatecniho modelu z prikladu
+    examples = load_examples()                                      
+    model = find_positive_example(examples)                          
 
     for example in examples:
-        if 'false' in example:                                      # **NEGATIVNI PRIKLAD**
+        if 'false' in example:                                     
             example = example[:-1]
-            model = specialization(example)                   # Specializace
+            model = specialization(example)                   
             print(model)
             print('\n')
 
-        elif 'true' in example:                                      # **POZITIVNI PRIKLAD**
+        elif 'true' in example:                                     
             example = example[:-1]
-            diff_values_links = find_differences(example)     # Seznam linku, ktere jsou rozdilne s prikladem
+            diff_values_links = find_differences(example)     
 
-            for diff in diff_values_links:                           # Prochazet rozdilne linky
+            for diff in diff_values_links:                           
                 l1 = Link(diff)
 
-                miss = check_miss_link(l1, example)          # Kontrola jestli nechybi v prikladu link, ktery je modelu
+                miss = check_miss_link(l1, example)         
 
-                if miss:                                         # Drop link, odstranit nedulezity link z modelu
+                if miss:                                        
                     print('DROP LINK:')
                     model.remove(diff)
 
-                elif re.match('^\d+-\d+$', l1.property_value):       # Kontrola linku na ciselny interval
+                elif re.match('^\d+-\d+$', l1.property_value):     
                     print('INTERVAL LINK:')
                     edit_interval(l1, example)
 
-                elif l1.property_value.isnumeric():        # Kdyz link modelu obsahuje ciselnou hodnotu udelej interval
+                elif l1.property_value.isnumeric():        
                     print('NUMBER LINK:')
                     make_interval(l1, example)
 
@@ -222,16 +222,16 @@ def main():
                             e_property_value = link_get_value(link)
                             break
 
-                    if e_property_value in polygon and l1.property_value != 'polygon' and l1.property_value in polygon:   # Pokud jsou hodnoty modelu i prikladu v polygonu, zobecnim na polygon
+                    if e_property_value in polygon and l1.property_value != 'polygon' and l1.property_value in polygon:   
                         model = list(
                             map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'), model))
 
-                    elif (l1.property_value in polygon or l1.property_value == 'polygon') and e_property_value not in polygon:      # Pokud nejsou v polygonu, tak pridam disjunkci
+                    elif (l1.property_value in polygon or l1.property_value == 'polygon') and e_property_value not in polygon:     
                         model = list(map(lambda x: x.replace(diff,
                                                              'must-be-' + l1.property_name + ',' + l1.property_value + ' ∪ '
                                                              + e_property_value + ')'), model))
 
-                    elif exclude_values(l1, e_property_value):          # Kdyz se hodnoty v linku vylucuji
+                    elif exclude_values(l1, e_property_value):         
                         model.remove(l1.link)
 
                 print(model)
