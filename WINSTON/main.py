@@ -4,10 +4,7 @@ import os.path
 import xml.etree.cElementTree as ET
 
 polygon = ['pyramid', 'block', 'cylinder']
-
-generalization_tree = {'polygon-pillar': ['block', 'cylinder', 'pyramid', 'cube'],
-                       'polygon-roof': ['pyramid', 'block', 'cube', 'cylinder']}
-
+generalization_tree = {}
 exclude_link_dict = {}
 
 model = []
@@ -26,14 +23,22 @@ class Link:
 
 
 def load_examples():
+
     tree = ET.parse('exclude_links.xml')
     root = tree.getroot()
-
     for child in root:
         values = []
         for e in child:
             values.append(e.text)
         exclude_link_dict[child.tag] = values
+
+    tree = ET.parse('generalization_trees.xml')
+    root = tree.getroot()
+    for child in root:
+        values = []
+        for e in child:
+            values.append(e.text)
+        generalization_tree[child.tag] = values
 
     with open("example.csv", "r") as file:
         reader = csv.reader(file, delimiter=';')
@@ -150,7 +155,7 @@ def make_interval(l1, example):
         if l1.property_name in link:
             e_property_value = link_get_value(link)
 
-            if l1.property_value < e_property_value:  
+            if l1.property_value < e_property_value:  # Nastaveni intervalu, podle velikosti hodnot
                 model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' + l1.property_value
                                                      + '-' + e_property_value + ')'), model))
             else:
@@ -166,10 +171,10 @@ def edit_interval(l1, example):
     values = l1.property_value.split('-')
 
     for link in example:
-        if l1.property_name in link:  
-            e_property_value = link_get_value(link)  
+        if l1.property_name in link:  # Jestlize vlastnost nachazi v linku prikladu
+            e_property_value = link_get_value(link)  # Ziska hodnotu linku z prikladu
 
-            if values[1] < e_property_value:  
+            if values[1] < e_property_value:  # Porovnani hodnot z intervalu values[0] a values[0] modelu a podle toho upravi novy interval
                 model = list(map(lambda x: x.replace(l1.link,
                                                      'must-be-' + l1.property_name + ',' + values[
                                                          0] + '-' + e_property_value + ')'), model))
@@ -183,34 +188,34 @@ def edit_interval(l1, example):
 def main():
     global model
 
-    examples = load_examples()                                      
-    model = find_positive_example(examples)                          
+    examples = load_examples()                                       # Nacitani prikladu ze souboru
+    model = find_positive_example(examples)                          # Nalezeni pocatecniho modelu z prikladu
 
     for example in examples:
-        if 'false' in example:                                     
+        if 'false' in example:                                      # **NEGATIVNI PRIKLAD**
             example = example[:-1]
-            model = specialization(example)                   
+            model = specialization(example)                   # Specializace
             print(model)
             print('\n')
 
-        elif 'true' in example:                                     
+        elif 'true' in example:                                      # **POZITIVNI PRIKLAD**
             example = example[:-1]
-            diff_values_links = find_differences(example)     
+            diff_values_links = find_differences(example)     # Seznam linku, ktere jsou rozdilne s prikladem
 
-            for diff in diff_values_links:                           
+            for diff in diff_values_links:                           # Prochazet rozdilne linky
                 l1 = Link(diff)
 
-                miss = check_miss_link(l1, example)         
+                miss = check_miss_link(l1, example)          # Kontrola jestli nechybi v prikladu link, ktery je modelu
 
-                if miss:                                        
+                if miss:                                         # Drop link, odstranit nedulezity link z modelu
                     print('DROP LINK:')
                     model.remove(diff)
 
-                elif re.match('^\d+-\d+$', l1.property_value):     
+                elif re.match('^\d+-\d+$', l1.property_value):       # Kontrola linku na ciselny interval
                     print('INTERVAL LINK:')
                     edit_interval(l1, example)
 
-                elif l1.property_value.isnumeric():        
+                elif l1.property_value.isnumeric():        # Kdyz link modelu obsahuje ciselnou hodnotu udelej interval
                     print('NUMBER LINK:')
                     make_interval(l1, example)
 
@@ -222,16 +227,19 @@ def main():
                             e_property_value = link_get_value(link)
                             break
 
-                    if e_property_value in polygon and l1.property_value != 'polygon' and l1.property_value in polygon:   
-                        model = list(
-                            map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'), model))
+                    # Pokud jsou hodnoty modelu i prikladu v polygonu, zobecnim na polygon
+                    if e_property_value in polygon and l1.property_value != 'polygon':
+                        if l1.property_value in polygon:
+                            model = list(
+                                map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'), model))
 
-                    elif (l1.property_value in polygon or l1.property_value == 'polygon') and e_property_value not in polygon:     
+                    # Pokud nejsou v polygonu, tak pridam disjunkci
+                    elif (l1.property_value in polygon or l1.property_value == 'polygon') and e_property_value not in polygon:
                         model = list(map(lambda x: x.replace(diff,
                                                              'must-be-' + l1.property_name + ',' + l1.property_value + ' ∪ '
                                                              + e_property_value + ')'), model))
 
-                    elif exclude_values(l1, e_property_value):         
+                    elif exclude_values(l1, e_property_value):          # Kdyz se hodnoty v linku vylucuji
                         model.remove(l1.link)
 
                 print(model)
@@ -239,7 +247,7 @@ def main():
 
 
 if __name__ == '__main__':
-    if os.path.isfile('model.csv'):
+    if not os.path.isfile('model.csv'):
         print('MODEL IS ALREADY CREATED')
     else:
         main()
