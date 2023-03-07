@@ -1,7 +1,9 @@
 import csv
+import random
 import re
 import os.path
 import xml.etree.cElementTree as ET
+import distance
 
 polygon = ['pyramid', 'block', 'cylinder']
 generalization_tree = {}
@@ -47,7 +49,7 @@ def load_examples():
 
 def save_model():
     with open('model.csv', 'w') as file:
-        write = (csv.writer(file))
+        write = csv.writer(file, delimiter=';')
         write.writerow(model)
         print('THE MODEL HAS BEEN SUCCESSFULLY SAVED TO THE CSV FILE')
 
@@ -246,10 +248,75 @@ def main():
                 print('\n')
 
 
+def test_model():
+    example = random.choice(load_examples())
+
+    example_result = example[-1]
+    example = example[:-1]
+
+    print('MODEL: ')
+    print(model)
+
+    print('EXAMPLE:')
+    print(example)
+    print('EXAMPLE SHOULD BE: ' + example_result)
+    print('************************************************************')
+
+    model2 = model.copy()
+
+    for m in model2:
+        if m.startswith('must-not-be-'):
+            if m[len('must-not-be-'):] in example:
+                return False
+            else:
+                model2.remove(m)
+
+    for m in model:
+        l1 = Link(m)
+        l1.property_name = l1.property_name[len('must-be-'):]
+        for e in example:
+            if e in l1.link:
+                model2.remove(l1.link)
+                break
+            elif l1.property_name in e:
+                ex = Link(e)
+                if '∪' in l1.property_value:
+                    values = l1.property_value.split('∪')
+                    if values[0] == ex.property_value or values[1] == ex.property_value:
+                        model2.remove(l1.link)
+                        break
+                elif 'polygon' in l1.property_value:
+                    if ex.property_value in polygon:
+                        model2.remove(l1.link)
+                        break
+                elif ex.property_value.isnumeric():
+                    values = l1.property_value.split('-')
+                    if values[0] <= ex.property_value <= values[1]:
+                        model2.remove(l1.link)
+                        break
+
+    if not model2:
+        return True
+    else:
+        return False
+
+
 if __name__ == '__main__':
-    if not os.path.isfile('model.csv'):
+    if os.path.isfile('model.csv'):
         print('MODEL IS ALREADY CREATED')
+        with open('model.csv') as f:
+            reader = csv.reader(f, delimiter=';')
+            tmp = list(reader)
+            model = tmp[0]
     else:
         main()
         print('A GENERAL MODEL WAS FOUND!')
         save_model()
+
+    if test_model():
+        print('True Example')
+    else:
+        print('False Example')
+
+
+
