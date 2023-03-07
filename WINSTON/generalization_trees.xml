@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<generalization_tree>
+    <polygon-pillar>
+        <polygon>block</polygon>
+        <polygon>cylinder</polygon>
+        <polygon>pyramid</polygon>
+        <polygon>cube</polygon>
+    </polygon-pillar>
+    <polygon-roof>
+        <polygon>pyramid</polygon>
+        <polygon>block</polygon>
+        <polygon>cube</polygon>
+        <polygon>cylinder</polygon>
+    </polygon-roof>
+</generalization_tree>

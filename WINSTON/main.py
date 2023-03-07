@@ -3,7 +3,6 @@ import random
 import re
 import os.path
 import xml.etree.cElementTree as ET
-import distance
 
 polygon = ['pyramid', 'block', 'cylinder']
 generalization_tree = {}
@@ -34,6 +33,7 @@ def load_examples():
             values.append(e.text)
         exclude_link_dict[child.tag] = values
 
+    '''
     tree = ET.parse('generalization_trees.xml')
     root = tree.getroot()
     for child in root:
@@ -41,6 +41,7 @@ def load_examples():
         for e in child:
             values.append(e.text)
         generalization_tree[child.tag] = values
+    '''
 
     with open("example.csv", "r") as file:
         reader = csv.reader(file, delimiter=';')
