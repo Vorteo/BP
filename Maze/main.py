@@ -4,39 +4,43 @@ import random
 from math import sqrt
 
 # -----------------------------------------------------------------------
+
 # Maze parameters, width and height of maze
-MAZE_WIDTH = 10
-MAZE_HEIGHT = 10
+MAZE_WIDTH = 20
+MAZE_HEIGHT = 20
 
 # Start and goal position in maze
-START_POS = (MAZE_WIDTH, MAZE_HEIGHT)
-GOAL_POS = (1, 1)
+START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
+GOAL_POSITION = (1, 1)
 
 # Max number of moves in maze and number of agents
 NUM_MOVES = MAZE_WIDTH * MAZE_HEIGHT
-NUM_AGENTS = 900
+NUM_AGENTS = 300
 
 # Parameters for genetic algorithm
 MUTATION_RATE = 0.2
 SELECTION_CUTOFF = 0.1
 
-# Move directions == North - N, South - S, East - E, West - W
+# Move directions North - N, South - S, East - E, West - W
 DIRECTION_OPTIONS = ['E', 'W', 'N', 'S']
 
+# Penalty for the agent if he wants to go to the wall or previous position (dead end)
+PENALTY = 200
 
 # -----------------------------------------------------------------------
 
 
 class Agent:
-    fitness = 0
-    can_walk = True
-    win = False
-
     def __init__(self):
+        # Agent properties
+        self.fitness = 0
         self.move_list = []
         self.visited_positions = []
-        self.x, self.y = START_POS
+        self.x, self.y = START_POSITION
+        self.win = False
+        self.can_walk = True
 
+    # method for move agents by direction to the next position (x,y)
     def move(self, direction):
         if direction == 'E':
             self.y = self.y + 1
@@ -46,9 +50,8 @@ class Agent:
             self.x = self.x - 1
         elif direction == 'S':
             self.x = self.x + 1
-        else:
-            print('Unknown move')
 
+    # next_move method, check if the next move is possible and make a move
     def next_move(self, move, maze_map, turn):
 
         if self.can_walk is False:
@@ -89,14 +92,13 @@ class Agent:
 
 
 class GeneticApplication:
-    turn = 1
-    generation = 1
-
     def __init__(self):
+        # Genetic Application properties
         self.maze = maze(MAZE_WIDTH, MAZE_HEIGHT)
         self.maze.CreateMaze()
-
         self.agents = [Agent() for _ in range(NUM_AGENTS)]
+        self.turn = 1
+        self.generation = 1
 
     def init_population(self):
         for i in self.agents:
@@ -120,7 +122,7 @@ class GeneticApplication:
                     break
 
                 for a in self.agents:
-                    a.fitness = calculate_distance((a.x, a.y), GOAL_POS)
+                    a.fitness = calculate_distance((a.x, a.y), GOAL_POSITION)
 
                 self.agents.sort(key=lambda x: x.fitness)
                 print('Best fitness of {} generation is {}'.format(self.generation, self.agents[0].fitness))
@@ -149,7 +151,7 @@ class GeneticApplication:
                 a.next_move(move, self.maze.maze_map, self.turn - 1)
 
             for a in self.agents:
-                if (a.x, a.y) == GOAL_POS:
+                if (a.x, a.y) == GOAL_POSITION:
                     a.win = True
                     a.can_walk = False
                     print('Someone reach the goal destination!')
@@ -158,6 +160,8 @@ class GeneticApplication:
 
 
 # -----------------------------------------------------------------------
+# Functions
+
 # Generate array of random moves Up, Down, Left and Right as North, South, East, West
 def generate_random_moves():
     return np.array(random.choices(DIRECTION_OPTIONS, k=NUM_MOVES))
@@ -182,8 +186,12 @@ def crossover(array1, array2):
     return new_arr
 
 
-# mutation
+# Simple mutation function
 def mutate(array):
+    # if random generated number between 0-1 is less or equal as MUTATION_RATE then we perform mutation
+    # then randomly selects which places are to be mutated in moves from agents
+    # and returns new array with moves (every row is one moves list for agent and column is move in current turn)
+    # for the next generation of agents
     if random.random() <= MUTATION_RATE:
         total = np.shape(array)[0] * np.shape(array)[1]
 
@@ -199,6 +207,8 @@ def mutate(array):
         return array
     else:
         return array
+
+# -----------------------------------------------------------------------
 
 
 if __name__ == '__main__':
