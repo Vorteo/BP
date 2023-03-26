@@ -1,6 +1,7 @@
 import numpy as np
 from pyMaze import maze, agent
 import random
+from time import sleep
 from math import sqrt
 
 # -----------------------------------------------------------------------
@@ -25,10 +26,10 @@ SELECTION_CUTOFF = 0.1
 DIRECTION_OPTIONS = ['E', 'W', 'N', 'S']
 
 # Penalty for the agent if he wants to go to the wall or previous position (dead end)
-PENALTY = 200
+PENALTY = 100
 
 # Generation limit, stops the evaluation when more than GENERATION_LIMIT generations are created
-GENERATION_LIMIT = 100
+GENERATION_LIMIT = 200
 
 # -----------------------------------------------------------------------
 
@@ -61,7 +62,6 @@ class Agent:
             return
 
         next_position = tuple()
-
         if move == 'E':
             next_position = (self.x, self.y + 1)
         elif move == 'W':
@@ -71,27 +71,24 @@ class Agent:
         elif move == 'S':
             next_position = (self.x + 1, self.y)
 
-        if (self.x, self.y) in maze_map:
-            if maze_map[(self.x, self.y)][move] == 1 and next_position not in self.visited_positions:
-                self.visited_positions.append((self.x, self.y))
-                self.move(move)
-            else:
-                if next_position in self.visited_positions:
-                    directions = [k for k, v in maze_map[(self.x, self.y)].items() if v == 1]
-                    try:
-                        directions.remove(move)
-                    except:
-                        return
-                    if len(directions) < 1:
-                        self.can_walk = False
-                        self.fitness += 200
-                        return
-                    else:
-                        tmp = random.choice(directions)
-                        self.move_list[turn] = tmp
-                        self.move(tmp)
+        if maze_map[(self.x, self.y)][move] == 1 and next_position not in self.visited_positions:
+            self.visited_positions.append((self.x, self.y))
+            self.move(move)
         else:
-            self.can_walk = False
+            if next_position in self.visited_positions:
+                directions = [k for k, v in maze_map[(self.x, self.y)].items() if v == 1]
+                try:
+                    directions.remove(move)
+                except:
+                    return
+                if len(directions) < 1:
+                    self.can_walk = False
+                    self.fitness += 200
+                    return
+                else:
+                    tmp = random.choice(directions)
+                    self.move_list[turn] = tmp
+                    self.move(tmp)
 
 
 class GeneticApplication:
@@ -118,6 +115,7 @@ class GeneticApplication:
             self.agents[i].move_list = m
 
         print("## {} generation created ##".format(self.generation))
+        # sleep(0.1)
 
     # evaluate method that in loop make move, calculate distance, perform selection, crossover,
     # mutation, next generation and  check if someone reach the goal
