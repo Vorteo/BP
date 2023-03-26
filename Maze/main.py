@@ -1,7 +1,6 @@
 import numpy as np
 from pyMaze import maze, agent
 import random
-from time import sleep
 from math import sqrt
 
 # -----------------------------------------------------------------------
@@ -16,7 +15,7 @@ GOAL_POSITION = (1, 1)
 
 # Max number of moves in maze and number of agents
 NUM_MOVES = MAZE_WIDTH * MAZE_HEIGHT
-NUM_AGENTS = 400
+NUM_AGENTS = 200
 
 # Parameters for genetic algorithm
 MUTATION_RATE = 0.2
@@ -25,11 +24,8 @@ SELECTION_CUTOFF = 0.1
 # Move directions North - N, South - S, East - E, West - W
 DIRECTION_OPTIONS = ['E', 'W', 'N', 'S']
 
-# Penalty for the agent if he wants to go to the wall or previous position (dead end)
-PENALTY = 100
-
 # Generation limit, stops the evaluation when more than GENERATION_LIMIT generations are created
-GENERATION_LIMIT = 200
+GENERATION_LIMIT = 100
 
 # -----------------------------------------------------------------------
 
@@ -74,21 +70,22 @@ class Agent:
         if maze_map[(self.x, self.y)][move] == 1 and next_position not in self.visited_positions:
             self.visited_positions.append((self.x, self.y))
             self.move(move)
+            return
         else:
-            if next_position in self.visited_positions:
+            if maze_map[(self.x, self.y)][move] == 1:
                 directions = [k for k, v in maze_map[(self.x, self.y)].items() if v == 1]
-                try:
-                    directions.remove(move)
-                except:
-                    return
+                directions.remove(move)
+
                 if len(directions) < 1:
                     self.can_walk = False
-                    self.fitness += 200
                     return
                 else:
                     tmp = random.choice(directions)
                     self.move_list[turn] = tmp
-                    self.move(tmp)
+                    self.next_move(tmp,maze_map,turn)
+                    return
+            else:
+                self.fitness += 200
 
 
 class GeneticApplication:
