@@ -5,8 +5,8 @@ from math import sqrt
 
 
 # Maze parameters, width and height of maze
-MAZE_WIDTH = 15
-MAZE_HEIGHT = 15
+MAZE_WIDTH = 30
+MAZE_HEIGHT = 30
 
 # Start and goal position in maze
 START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
@@ -14,17 +14,17 @@ GOAL_POSITION = (1, 1)
 
 # Max number of moves in maze and number of agents
 NUM_MOVES = MAZE_WIDTH * MAZE_HEIGHT
-NUM_AGENTS = 400
+NUM_AGENTS = 900
 
 # Parameters for genetic algorithm
-MUTATION_RATE = 0.2
+MUTATION_RATE = 0.15
 SELECTION_CUTOFF = 0.1
 
 # Move directions North - N, South - S, East - E, West - W
 DIRECTION_OPTIONS = ['E', 'W', 'N', 'S']
 
 # Generation limit, stops the evaluation when more than GENERATION_LIMIT are created
-GENERATION_LIMIT = 200
+GENERATION_LIMIT = 1500
 
 
 class Agent:
@@ -117,7 +117,7 @@ class Agent:
 class GeneticApplication:
     def __init__(self):
         self.maze = maze(MAZE_WIDTH, MAZE_HEIGHT)
-        self.maze.CreateMaze(loopPercent=0)
+        self.maze.CreateMaze()
         self.agents = [Agent() for _ in range(NUM_AGENTS)]
         self.turn = 1
         self.generation = 1
@@ -125,15 +125,20 @@ class GeneticApplication:
     # initialization method of the initial population of agents by a random array of directions
     def init_agents(self):
         for i in self.agents:
-            i.move_list = generate_random_moves()
+            i.move_list = self.generate_random_moves()
+
+    # Generate random moves function
+    @staticmethod
+    def generate_random_moves(turns=NUM_MOVES):
+        return np.array(random.choices(DIRECTION_OPTIONS, k=turns))
 
     # method that sets up the next generation of agents and reset turn, increase generation counter
-    def next_generation(self, moves_list):
+    def next_generation(self, moves_lists):
         self.turn = 1
         self.generation += 1
 
         self.agents = [Agent() for _ in range(NUM_AGENTS)]
-        for i, m in enumerate(moves_list):
+        for i, m in enumerate(moves_lists):
             self.agents[i].move_list = m
 
         print("## {} generation created ##".format(self.generation))
@@ -153,7 +158,7 @@ class GeneticApplication:
                 # if any agents found path, then stop evaluation and show solution
                 sum_of_winners = len([i for i in genetic_app.agents if i.win is True])
                 #  if any(a.win for a in self.agents) is True:
-                if (sum_of_winners / NUM_AGENTS) > 0.2:
+                if (sum_of_winners / NUM_AGENTS) > 0.4:
                     print('The agent found path through the maze')
                     break
 
@@ -214,10 +219,6 @@ class GeneticApplication:
 
 
 # Functions
-# Generate random moves function
-def generate_random_moves(turns=NUM_MOVES):
-    return np.array(random.choices(DIRECTION_OPTIONS, k=turns))
-
 
 # Distance function
 # Calculate distance function between agents position and goal position
@@ -267,6 +268,38 @@ def mutate(array):
 
 
 if __name__ == '__main__':
+
+    solved_mazes = 0
+    number_of_mazes = 0
+
+    while True:
+        number_of_mazes += 1
+
+        genetic_app = GeneticApplication()
+        genetic_app.init_agents()
+
+        genetic_app.evaluate()
+
+        a_goal = [a for a in genetic_app.agents if a.win is True]
+
+        if a_goal:
+            solved_mazes += 1
+
+            total_winners = len([i for i in genetic_app.agents if i.win is True])
+            print("\n")
+            print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
+            print('Solved mazes: {}, number of mazes: {}'.format(solved_mazes, number_of_mazes))
+            print("\n")
+
+            a = agent(genetic_app.maze, footprints=True)
+            genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80)
+        else:
+            for i in genetic_app.agents:
+                a = agent(genetic_app.maze, footprints=True, color=COLOR.red)
+                genetic_app.maze.tracePath({a: i.visited_positions}, delay=5)
+
+        # genetic_app.maze.run()
+    """
     genetic_app = GeneticApplication()
     genetic_app.init_agents()
 
@@ -277,6 +310,7 @@ if __name__ == '__main__':
     if a_goal:
         total_winners = len([i for i in genetic_app.agents if i.win is True])
         print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
+        print("\n")
 
         a = agent(genetic_app.maze, footprints=True)
         genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80)
@@ -286,3 +320,4 @@ if __name__ == '__main__':
             genetic_app.maze.tracePath({a: i.visited_positions}, delay=5)
 
     genetic_app.maze.run()
+    """
