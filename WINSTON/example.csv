@@ -13,3 +13,5 @@ consists_of(arch,pillar1);consists_of(arch,pillar2);consists_of(arch,roof);has_s
 consists_of(arch,pillar1);consists_of(arch,pillar2);consists_of(arch,roof);has_shape(pillar1,pyramid);has_shape(pillar2,cylinder);has_shape(roof,cylinder);supports(pillar1,roof);supports(pillar2,roof);true
 consists_of(arch,pillar1);consists_of(arch,pillar2);has_shape(pillar1,cylinder);has_shape(pillar2,block);has_color(pillar1,yellow);has_color(pillar2,black);false
 consists_of(arch,pillar1);consists_of(arch,pillar2);consists_of(arch,roof);has_shape(pillar1,cylinder);has_shape(pillar2,block);has_shape(roof,cylinder);has_color(pillar1,red);has_color(roof,orange);supports(pillar1,roof);supports(pillar2,roof);true
+consists_of(arch,pillar1);consists_of(arch,pillar2);has_shape(pillar1,block);has_shape(pillar2,block);has_color(pillar1,white);has_color(pillar2,white);next_to(pillar1,pillar2);false
+consists_of(arch,pillar1);consists_of(arch,pillar2);consists_of(arch,roof);has_shape(pillar1,cylinder);has_shape(pillar2,block);has_shape(roof,block);has_color(pillar1,red);has_color(pillar2,green);has_color(roof,black);supports(pillar1,roof);supports(pillar2,roof);true
