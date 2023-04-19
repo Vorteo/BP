@@ -4,12 +4,6 @@ import re
 import os.path
 import xml.etree.cElementTree as ET
 
-polygon = ['pyramid', 'block', 'cylinder']
-generalization_tree = {}
-exclude_link_dict = {}
-
-model = []
-
 
 class Link:
     def __init__(self, link):
@@ -23,66 +17,188 @@ class Link:
         self.property_value = property_value
 
 
-def load_examples():
+class Agent:
+    def __init__(self):
+        self.model = []
+        self.polygon = ['pyramid', 'block', 'cylinder']
+        self.exclude_link_dict = {}
+        self.examples = []
 
-    tree = ET.parse('exclude_links.xml')
-    root = tree.getroot()
-    for child in root:
-        values = []
-        for e in child:
-            values.append(e.text)
-        exclude_link_dict[child.tag] = values
+    # load examples from csv file and exclude links from xml
+    def load_examples(self):
+        tree = ET.parse('exclude_links.xml')
+        root = tree.getroot()
+        for child in root:
+            values = []
+            for e in child:
+                values.append(e.text)
+            self.exclude_link_dict[child.tag] = values
 
-    '''
-    tree = ET.parse('generalization_trees.xml')
-    root = tree.getroot()
-    for child in root:
-        values = []
-        for e in child:
-            values.append(e.text)
-        generalization_tree[child.tag] = values
-    '''
+        with open("example.csv", "r") as file:
+            reader = csv.reader(file, delimiter=',')
+            self.examples = list(reader)
 
-    with open("example.csv", "r") as file:
-        reader = csv.reader(file, delimiter=';')
-        return list(reader)
+    # save model into csv
+    def save_model(self):
+        with open('model.csv', 'w') as file:
+            write = csv.writer(file, delimiter=',')
+            write.writerow(self.model)
+            print('THE MODEL HAS BEEN SUCCESSFULLY SAVED TO THE CSV FILE\n')
+
+    def load_model(self):
+        with open('model.csv') as f:
+            reader = csv.reader(f, delimiter=',')
+            tmp = list(reader)
+            self.model = tmp[0]
+
+    # find first positive example, set as model
+    def find_first_positive_example(self):
+        for example in self.examples:
+            if 'true' in example:
+                self.model = example
+                self.model.pop(len(self.model) - 1)
+                self.examples.remove(example)
+
+                print('A POSITIVE EXAMPLE WAS FOUND:')
+                print(self.model)
+                print("\n")
+
+    # return differences between both model and example
+    def compare_models(self, example):
+        tmp_model = []
+
+        for link in self.model:
+            if link.startswith('must-be-'):
+                tmp_model.append(link[len('must-be-'):])
+            elif link.startswith('must-not-be-'):
+                tmp_model.append(link[len('must-not-be-'):])
+            else:
+                tmp_model.append(link)
+
+        d1 = [link for link in example if link not in tmp_model and 'color' not in link and 'shape' not in link]
+
+        d2 = [link for link in self.model if link not in example]
+        d2 = [link for link in d2 if
+              'must-be' not in link and 'must-not-be' not in link and 'color' not in link and 'shape' not in link]
+
+        return d1, d2
+
+    # compare models, make require or forbidden link
+    def specialization(self, example):
+        # diff1 and diff2 differences between both model and example, what is missing in one and other
+        diff1, diff2 = self.compare_models(example)
+        if diff2:
+            print('REQUIRED LINK:')
+            for link in diff2:
+                self.model = list(map(lambda x: x.replace(link, 'must-be-' + link), self.model))
+        elif diff1:
+            print('FORBIDDEN LINK:')
+            for link in diff1:
+                self.model.append('must-not-be-' + link)
+
+    # create number interval link
+    def make_interval(self, l1, example):
+        for link in example:
+            if l1.property_name in link:
+                e_property_value = link_get_value(link)
+
+                if l1.property_value < e_property_value:  # Interval settings up, according to the values
+                    self.model = list(
+                        map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' + l1.property_value
+                                                + '-' + e_property_value + ')'), self.model))
+                elif l1.property_value > e_property_value:
+                    self.model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name +
+                                                              ',' + e_property_value
+                                                               + '-' + l1.property_value + ')'), self.model))
+                break
+
+    # change values in interval link
+    def edit_interval(self, l1, example):
+        values = l1.property_value.split('-')
+
+        for link in example:
+            if l1.property_name in link:  # If the property is in the example link
+                e_property_value = link_get_value(link)  # Get value from link
+
+                if values[1] < e_property_value:
+                    # Compare the values from the values[0] and values[1] interval of the model and adjust the new
+                    # interval
+                    self.model = list(map(lambda x: x.replace(l1.link,
+                                                               'must-be-' + l1.property_name + ',' + values[
+                                                                   0] + '-' + e_property_value + ')'), self.model))
+                elif values[0] > e_property_value:
+                    self.model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' +
+                                                               e_property_value + '-' + values[1] + ')'), self.model))
+                print(self.model)
+                break
+
+    # test created model with random example
+    def test_model(self):
+        self.load_examples()
+        example = random.choice(self.examples)
+
+        example_result = example[-1]
+        example = example[:-1]
+
+        print('MODEL: ')
+        print(self.model)
+
+        print('EXAMPLE:')
+        print(example)
+        print('EXAMPLE SHOULD BE: ' + example_result)
+        print('************************************************************')
+
+        model2 = self.model.copy()
+
+        for m in model2:
+            if m.startswith('must-not-be-'):
+                if m[len('must-not-be-'):] in example:
+                    return False
+                else:
+                    model2.remove(m)
+
+        for m in self.model:
+            l1 = Link(m)
+            l1.property_name = l1.property_name[len('must-be-'):]
+            for e in example:
+                if e in l1.link:
+                    model2.remove(l1.link)
+                    break
+                elif l1.property_name in e:
+                    ex = Link(e)
+                    if '∪' in l1.property_value:
+                        values = l1.property_value.split('∪')
+                        if values[0] == ex.property_value or values[1] == ex.property_value:
+                            model2.remove(l1.link)
+                            break
+                    elif 'polygon' in l1.property_value:
+                        if ex.property_value in agent.polygon:
+                            model2.remove(l1.link)
+                            break
+                    elif ex.property_value.isnumeric():
+                        values = l1.property_value.split('-')
+                        if values[0] <= ex.property_value <= values[1]:
+                            model2.remove(l1.link)
+                            break
+
+        if not model2:
+            return True
+        else:
+            return False
 
 
-def save_model():
-    with open('model.csv', 'w') as file:
-        write = csv.writer(file, delimiter=';')
-        write.writerow(model)
-        print('THE MODEL HAS BEEN SUCCESSFULLY SAVED TO THE CSV FILE')
+agent = Agent()
 
 
-def find_positive_example(examples):
-    global model
-
-    for example in examples:
-        if 'true' in example:
-            model = example
-            model.pop(len(model) - 1)
-            examples.remove(example)
-
-            print('A POSITIVE EXAMPLE WAS FOUND:')
-            print(model)
-            print("\n")
-            return model
-
-
-def specialization(example):
-    global model
-
-    diff1, diff2 = compare_models(example)
-    if diff2:
-        print('REQUIRED LINK:')
-        for link in diff2:
-            model = list(map(lambda x: x.replace(link, 'must-be-' + link), model))
-    elif diff1:
-        print('FORBIDDEN LINK:')
-        for link in diff1:
-            model.append('must-not-be-' + link)
-    return model
+# function removes "must-be-" prefix before links name and return model
+def temp_model():
+    tmp_model = []
+    for link in agent.model:
+        if link.startswith('must-be-'):
+            tmp_model.append(link[len('must-be-'):])
+        else:
+            tmp_model.append(link)
+    return tmp_model
 
 
 def find_differences(example):
@@ -94,47 +210,18 @@ def find_differences(example):
     return diff_values_links
 
 
-def temp_model():
-    tmp_model = []
-    for link in model:
-        if link.startswith('must-be-'):
-            tmp_model.append(link[len('must-be-'):])
-        else:
-            tmp_model.append(link)
-    return tmp_model
-
-
-def compare_models(example):
-    tmp_model = []
-
-    for link in model:
-        if link.startswith('must-be-'):
-            tmp_model.append(link[len('must-be-'):])
-        elif link.startswith('must-not-be-'):
-            tmp_model.append(link[len('must-not-be-'):])
-        else:
-            tmp_model.append(link)
-
-    d1 = [link for link in example if link not in tmp_model and 'color' not in link and 'shape' not in link]
-
-    d2 = [link for link in model if link not in example]
-    d2 = [link for link in d2 if
-          'must-be' not in link and 'must-not-be' not in link and 'color' not in link and 'shape' not in link]
-
-    return d1, d2
-
-
-def exclude_values(link, example_link_value):
-
-    for ex in exclude_link_dict:
+# find exclude values between model and example link return True or False
+def find_exclude_values(link, example_link_value):
+    for ex in agent.exclude_link_dict:
         ex_split = ex.split('-')
         if ex_split[0] in link.property_name and ex_split[1] in link.property_name:
-            if link.property_value in exclude_link_dict[ex] and example_link_value in exclude_link_dict[ex]:
+            if link.property_value in agent.exclude_link_dict[ex] and example_link_value in agent.exclude_link_dict[ex]:
                 return True
 
     return False
 
 
+# get value from link
 def link_get_value(link):
     link_split = link.split(',')
     link_value = link_split[1]
@@ -143,6 +230,7 @@ def link_get_value(link):
     return link_value
 
 
+# check if link is in example
 def check_miss_link(l1, example):
     for link in example:
         if l1.property_name in link:
@@ -151,76 +239,40 @@ def check_miss_link(l1, example):
     return True
 
 
-def make_interval(l1, example):
-    global model
-
-    for link in example:
-        if l1.property_name in link:
-            e_property_value = link_get_value(link)
-
-            if l1.property_value < e_property_value:  # Nastaveni intervalu, podle velikosti hodnot
-                model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' + l1.property_value
-                                                     + '-' + e_property_value + ')'), model))
-            else:
-                model = list(map(lambda x: x.replace(l1.link,
-                                                     'must-be-' + l1.property_name + ',' + e_property_value
-                                                     + '-' + l1.property_value + ')'), model))
-            break
-
-
-def edit_interval(l1, example):
-    global model
-
-    values = l1.property_value.split('-')
-
-    for link in example:
-        if l1.property_name in link:  # Jestlize vlastnost nachazi v linku prikladu
-            e_property_value = link_get_value(link)  # Ziska hodnotu linku z prikladu
-
-            if values[1] < e_property_value:  # Porovnani hodnot z intervalu values[0] a values[0] modelu a podle toho upravi novy interval
-                model = list(map(lambda x: x.replace(l1.link,
-                                                     'must-be-' + l1.property_name + ',' + values[
-                                                         0] + '-' + e_property_value + ')'), model))
-            elif values[0] > e_property_value:
-                model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' +
-                                                     e_property_value + '-' + values[1] + ')'), model))
-            print(model)
-            break
-
-
+# main, make operations
 def main():
-    global model
+    global agent
 
-    examples = load_examples()                                       # Nacitani prikladu ze souboru
-    model = find_positive_example(examples)                          # Nalezeni pocatecniho modelu z prikladu
+    agent.load_examples()  # Loading examples from a file
+    agent.find_first_positive_example()  # Finding the initial model from the examples
 
-    for example in examples:
-        if 'false' in example:                                      # **NEGATIVNI PRIKLAD**
+    for example in agent.examples:
+        if 'false' in example:  # Negative example
             example = example[:-1]
-            model = specialization(example)                   # Specializace
-            print(model)
+            agent.specialization(example)  # Specialization
+            print(agent.model)
             print('\n')
 
-        elif 'true' in example:                                      # **POZITIVNI PRIKLAD**
+        elif 'true' in example:  # Positive example
             example = example[:-1]
-            diff_values_links = find_differences(example)     # Seznam linku, ktere jsou rozdilne s prikladem
+            diff_values_links = find_differences(example)  # List of links that are different with current example
 
-            for diff in diff_values_links:                           # Prochazet rozdilne linky
+            for diff in diff_values_links:  # Browse different links
                 l1 = Link(diff)
 
-                miss = check_miss_link(l1, example)          # Kontrola jestli nechybi v prikladu link, ktery je modelu
+                miss = check_miss_link(l1, example)  # Check if there is a missing link in the example,which is in model
 
-                if miss:                                         # Drop link, odstranit nedulezity link z modelu
+                if miss:  # Drop link, Remove unnecessary link from the model
                     print('DROP LINK:')
-                    model.remove(diff)
+                    agent.model.remove(diff)
 
-                elif re.match('^\d+-\d+$', l1.property_value):       # Kontrola linku na ciselny interval
+                elif re.match('^\d+-\d+$', l1.property_value):  # Checking the link for the number interval
                     print('INTERVAL LINK:')
-                    edit_interval(l1, example)
+                    agent.edit_interval(l1, example)
 
-                elif l1.property_value.isnumeric():        # Kdyz link modelu obsahuje ciselnou hodnotu udelej interval
+                elif l1.property_value.isnumeric():  # If the model link contains a numeric value, make an interval
                     print('NUMBER LINK:')
-                    make_interval(l1, example)
+                    agent.make_interval(l1, example)
 
                 elif not miss:
                     print('GENERALIZE WITH TREE, ENLARGE-LIST OR REMOVE:')
@@ -230,94 +282,38 @@ def main():
                             e_property_value = link_get_value(link)
                             break
 
-                    # Pokud jsou hodnoty modelu i prikladu v polygonu, zobecnim na polygon
-                    if e_property_value in polygon and l1.property_value != 'polygon':
-                        if l1.property_value in polygon:
-                            model = list(
-                                map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'), model))
+                    # If the values of the model and the example are in a polygon, Generalize to a polygon
+                    if e_property_value in agent.polygon and l1.property_value != 'polygon':
+                        if l1.property_value in agent.polygon:
+                            agent.model = list(
+                                map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'),
+                                    agent.model))
 
-                    # Pokud nejsou v polygonu, tak pridam disjunkci
-                    elif (l1.property_value in polygon or l1.property_value == 'polygon') and e_property_value not in polygon:
-                        model = list(map(lambda x: x.replace(diff,
+                    # IF they are not in a polygon, add a disjunction
+                    elif (
+                            l1.property_value in agent.polygon or l1.property_value == 'polygon') and e_property_value not in agent.polygon:
+                        agent.model = list(map(lambda x: x.replace(diff,
                                                              'must-be-' + l1.property_name + ',' + l1.property_value + ' ∪ '
-                                                             + e_property_value + ')'), model))
+                                                             + e_property_value + ')'), agent.model))
 
-                    elif exclude_values(l1, e_property_value):          # Kdyz se hodnoty v linku vylucuji
-                        model.remove(l1.link)
+                    elif find_exclude_values(l1, e_property_value):  # If the values in links are excluded
+                        agent.model.remove(l1.link)
 
-                print(model)
+                print(agent.model)
                 print('\n')
-
-
-def test_model():
-    example = random.choice(load_examples())
-
-    example_result = example[-1]
-    example = example[:-1]
-
-    print('MODEL: ')
-    print(model)
-
-    print('EXAMPLE:')
-    print(example)
-    print('EXAMPLE SHOULD BE: ' + example_result)
-    print('************************************************************')
-
-    model2 = model.copy()
-
-    for m in model2:
-        if m.startswith('must-not-be-'):
-            if m[len('must-not-be-'):] in example:
-                return False
-            else:
-                model2.remove(m)
-
-    for m in model:
-        l1 = Link(m)
-        l1.property_name = l1.property_name[len('must-be-'):]
-        for e in example:
-            if e in l1.link:
-                model2.remove(l1.link)
-                break
-            elif l1.property_name in e:
-                ex = Link(e)
-                if '∪' in l1.property_value:
-                    values = l1.property_value.split('∪')
-                    if values[0] == ex.property_value or values[1] == ex.property_value:
-                        model2.remove(l1.link)
-                        break
-                elif 'polygon' in l1.property_value:
-                    if ex.property_value in polygon:
-                        model2.remove(l1.link)
-                        break
-                elif ex.property_value.isnumeric():
-                    values = l1.property_value.split('-')
-                    if values[0] <= ex.property_value <= values[1]:
-                        model2.remove(l1.link)
-                        break
-
-    if not model2:
-        return True
-    else:
-        return False
 
 
 if __name__ == '__main__':
     if os.path.isfile('model.csv'):
         print('MODEL IS ALREADY CREATED')
-        with open('model.csv') as f:
-            reader = csv.reader(f, delimiter=';')
-            tmp = list(reader)
-            model = tmp[0]
+        agent.load_model()
     else:
         main()
         print('A GENERAL MODEL WAS FOUND!')
-        save_model()
+        agent.save_model()
 
-    if test_model():
+    # Testing the model to see if it identifies a random example as an arch or not
+    if agent.test_model():
         print('True Example')
     else:
         print('False Example')
-
-
-
