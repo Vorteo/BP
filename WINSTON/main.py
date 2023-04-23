@@ -43,8 +43,9 @@ class Agent:
         with open('model.csv', 'w') as file:
             write = csv.writer(file, delimiter=',')
             write.writerow(self.model)
-            print('THE MODEL HAS BEEN SUCCESSFULLY SAVED TO THE CSV FILE\n')
+            print('The model has been successfully saved to the model.csv file\n')
 
+    # load model from model.csv
     def load_model(self):
         with open('model.csv') as f:
             reader = csv.reader(f, delimiter=',')
@@ -59,12 +60,15 @@ class Agent:
                 self.model.pop(len(self.model) - 1)
                 self.examples.remove(example)
 
-                print('A POSITIVE EXAMPLE WAS FOUND:')
+                print('First positive example found:')
                 print(self.model)
                 print("\n")
+                break
 
-    # return differences between both model and example
-    def compare_models(self, example):
+    # return differences between model and example
+    # d1 contains links which miss in model
+    # d2 contains links which miss in example
+    def compare_model_example(self, example):
         tmp_model = []
 
         for link in self.model:
@@ -83,16 +87,16 @@ class Agent:
 
         return d1, d2
 
-    # compare models, make require or forbidden link
+    # compare models, make required or forbidden link
     def specialization(self, example):
         # diff1 and diff2 differences between both model and example, what is missing in one and other
-        diff1, diff2 = self.compare_models(example)
+        diff1, diff2 = self.compare_model_example(example)
         if diff2:
-            print('REQUIRED LINK:')
+            print('Required link:')
             for link in diff2:
                 self.model = list(map(lambda x: x.replace(link, 'must-be-' + link), self.model))
         elif diff1:
-            print('FORBIDDEN LINK:')
+            print('Forbidden link:')
             for link in diff1:
                 self.model.append('must-not-be-' + link)
 
@@ -124,8 +128,7 @@ class Agent:
                     # Compare the values from the values[0] and values[1] interval of the model and adjust the new
                     # interval
                     self.model = list(map(lambda x: x.replace(l1.link,
-                                                               'must-be-' + l1.property_name + ',' + values[
-                                                                   0] + '-' + e_property_value + ')'), self.model))
+                        'must-be-' + l1.property_name + ',' + values[0] + '-' + e_property_value + ')'), self.model))
                 elif values[0] > e_property_value:
                     self.model = list(map(lambda x: x.replace(l1.link, 'must-be-' + l1.property_name + ',' +
                                                                e_property_value + '-' + values[1] + ')'), self.model))
@@ -134,19 +137,19 @@ class Agent:
 
     # test created model with random example
     def test_model(self):
-        self.load_examples()
         example = random.choice(self.examples)
+        self.examples.remove(example)
 
         example_result = example[-1]
         example = example[:-1]
 
-        print('MODEL: ')
+        print('Model: ')
         print(self.model)
 
-        print('EXAMPLE:')
+        print('Random test example:')
         print(example)
-        print('EXAMPLE SHOULD BE: ' + example_result)
         print('************************************************************')
+        print('Example should be: ' + example_result)
 
         model2 = self.model.copy()
 
@@ -190,7 +193,7 @@ class Agent:
 agent = Agent()
 
 
-# function removes "must-be-" prefix before links name and return model
+# function removes "must-be-" prefix before links name and return edited copy of model
 def temp_model():
     tmp_model = []
     for link in agent.model:
@@ -201,6 +204,7 @@ def temp_model():
     return tmp_model
 
 
+# find differences between model and example
 def find_differences(example):
     tmp_model = temp_model()
 
@@ -239,7 +243,7 @@ def check_miss_link(l1, example):
     return True
 
 
-# main, make operations
+# main, loop through all training examples, performing operations to modify the model
 def main():
     global agent
 
@@ -263,19 +267,19 @@ def main():
                 miss = check_miss_link(l1, example)  # Check if there is a missing link in the example,which is in model
 
                 if miss:  # Drop link, Remove unnecessary link from the model
-                    print('DROP LINK:')
+                    print('Drop link:')
                     agent.model.remove(diff)
 
                 elif re.match('^\d+-\d+$', l1.property_value):  # Checking the link for the number interval
-                    print('INTERVAL LINK:')
+                    print('Interval link')
                     agent.edit_interval(l1, example)
 
                 elif l1.property_value.isnumeric():  # If the model link contains a numeric value, make an interval
-                    print('NUMBER LINK:')
+                    print('Number link:')
                     agent.make_interval(l1, example)
 
                 elif not miss:
-                    print('GENERALIZE WITH TREE, ENLARGE-LIST OR REMOVE:')
+                    print('Generalize with tree, enlarge-list or remove:')
                     e_property_value = str()
                     for link in example:
                         if l1.property_name in link:
@@ -305,15 +309,17 @@ def main():
 
 if __name__ == '__main__':
     if os.path.isfile('model.csv'):
-        print('MODEL IS ALREADY CREATED')
+        print('Model is already created')
         agent.load_model()
     else:
         main()
-        print('A GENERAL MODEL WAS FOUND!')
+        print('A model was found!')
         agent.save_model()
 
+    # load data again for testing model
+    agent.load_examples()
     # Testing the model to see if it identifies a random example as an arch or not
-    if agent.test_model():
-        print('True Example')
-    else:
-        print('False Example')
+    while agent.examples:
+        print(f"The agent identified the example as: {agent.test_model()}")
+        print('************************************************************\n\n')
+
