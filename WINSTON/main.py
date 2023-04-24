@@ -319,6 +319,9 @@ if __name__ == '__main__':
     # load data again for testing model
     agent.load_examples()
     # Testing the model to see if it identifies a random example as an arch or not
+    print('************************************************************')
+    print("Testing:")
+    print('************************************************************\n\n')
     while agent.examples:
         print(f"The agent identified the example as: {agent.test_model()}")
         print('************************************************************\n\n')
