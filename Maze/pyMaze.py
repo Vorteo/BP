@@ -377,7 +377,7 @@ class maze:
         if x + 1 <= self.rows:
             self.maze_map[x + 1, y]['N'] = 1
 
-    def CreateMaze(self, x=1, y=1, pattern=None, loopPercent=30, saveMaze=False, loadMaze=None,
+    def CreateMaze(self, x=1, y=1, pattern=None, loopPercent=25, saveMaze=False, loadMaze=None,
                    theme: COLOR = COLOR.dark):
         '''
         One very important function to create a Random Maze

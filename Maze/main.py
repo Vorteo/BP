@@ -1,11 +1,10 @@
 from pyMaze import maze, COLOR, agent
 import numpy as np
-from scipy.spatial.distance import cityblock
 import random
 import sys
 
-MAZE_WIDTH = 25
-MAZE_HEIGHT = 25
+MAZE_WIDTH = 20
+MAZE_HEIGHT = 20
 
 # Start and goal position in maze
 START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
@@ -25,6 +24,7 @@ MOVES_OPTIONS = ['E', 'W', 'N', 'S']
 # Generation limit, stops the evaluation when more than GENERATION_LIMIT are created
 GENERATION_LIMIT = 2000
 
+PERCENT_LIMIT = 0.8
 
 class Agent:
     def __init__(self):
@@ -96,18 +96,18 @@ class Agent:
                 self.fitness += 300
             else:
                 correct_moves = self.correct_moves(possible_moves)
-                remainder = set(correct_moves) - set(move)
-                remainder = [i for i in remainder]
+                difference = set(correct_moves) - set(move)
+                difference = [i for i in difference]
 
-                if len(remainder) > 1:
-                    choice = random.choice(remainder)
+                if len(difference) > 1:
+                    choice = random.choice(difference)
                     self.move_array[turn] = choice
                     self.move(choice)
-                elif len(remainder) == 0:
+                elif len(difference) == 0:
                     self.can_walk = False
                 else:
-                    self.move_array[turn] = remainder[0]
-                    self.move(remainder[0])
+                    self.move_array[turn] = difference[0]
+                    self.move(difference[0])
 
 
 class GeneticApplication:
@@ -149,7 +149,7 @@ class GeneticApplication:
                     break
 
                 sum_of_winners = len([i for i in genetic_app.agents if i.win is True])
-                if (sum_of_winners / NUM_AGENTS) > 0.9:
+                if (sum_of_winners / NUM_AGENTS) > PERCENT_LIMIT:
                     print('The agents found path through the maze')
                     break
 
@@ -215,8 +215,7 @@ class GeneticApplication:
 # Distance function
 # Calculate distance function between agents position and goal position
 def calculate_distance(point1, point2):
-    dist = cityblock(point2, point1)
-    # dist = abs(point2[0] - point1[0]) + abs(point2[1] - point1[1])
+    dist = abs(point2[0] - point1[0]) + abs(point2[1] - point1[1])
     return dist
 
 
@@ -258,7 +257,7 @@ def mutate(array):
     else:
         return array
 
-
+# setup start parameters
 def update_variables():
     global MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT, START_POSITION
     
@@ -277,9 +276,9 @@ def update_variables():
             if var_name == "MAZE_WIDTH":
                 START_POSITION = (int(new_value), START_POSITION[1])
             elif var_name == "MAZE_HEIGHT":
-                # Update START_POSITION[1] based on new value of MAZE_HEIGHT
                 START_POSITION = (START_POSITION[0], int(new_value))
             variables[var_name] = type(var_value)(new_value)
+
     MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT = \
         variables["MAZE_WIDTH"], variables["MAZE_HEIGHT"],\
         variables["NUM_AGENTS"], variables["MUTATION_RATE"], variables["SELECTION_CUTOFF"], \
@@ -287,41 +286,40 @@ def update_variables():
 
     print("Variables updated successfully!")
 
-
 if __name__ == '__main__':
     update_variables()
 
     if "test" in sys.argv:
         solved_mazes = 0
         number_of_mazes = 0
+        
+        try:
+            while True:
+                number_of_mazes += 1
 
-        while True:
-            number_of_mazes += 1
+                genetic_app = GeneticApplication()
+                genetic_app.init_agents()
 
-            genetic_app = GeneticApplication()
-            genetic_app.init_agents()
+                genetic_app.evaluate()
 
-            genetic_app.evaluate()
+                a_goal = [a for a in genetic_app.agents if a.win is True]
+                if a_goal:
+                    solved_mazes += 1
 
-            a_goal = [a for a in genetic_app.agents if a.win is True]
+                    total_winners = len([i for i in genetic_app.agents if i.win is True])
+                    print("\n")
+                    print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
 
-            if a_goal:
-                solved_mazes += 1
+                    a = agent(genetic_app.maze, footprints=True)
+                    genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80)
 
-                total_winners = len([i for i in genetic_app.agents if i.win is True])
-                print("\n")
-                print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
                 print('Solved mazes: {}, number of mazes: {}'.format(solved_mazes, number_of_mazes))
                 print("\n")
 
-                a = agent(genetic_app.maze, footprints=True)
-                genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80)
-            else:
-                for i in genetic_app.agents:
-                    a = agent(genetic_app.maze, footprints=True, color=COLOR.red)
-                    genetic_app.maze.tracePath({a: i.visited_positions}, delay=5)
+        except KeyboardInterrupt:
+            print("Exit program...")
+            exit(0)
     else:
-
         genetic_app = GeneticApplication()
         genetic_app.init_agents()
 
