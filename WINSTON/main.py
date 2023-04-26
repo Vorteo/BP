@@ -145,6 +145,7 @@ class Agent:
 
         print('Model: ')
         print(self.model)
+        print("")
 
         print('Random test example:')
         print(example)
@@ -321,8 +322,11 @@ if __name__ == '__main__':
     # Testing the model to see if it identifies a random example as an arch or not
     print('************************************************************')
     print("Testing:")
-    print('************************************************************\n\n')
+    print('************************************************************\n')
+
+    num_example = 1
     while agent.examples:
+        print(f"Test example number: {num_example}")
         print(f"The agent identified the example as: {agent.test_model()}")
         print('************************************************************\n\n')
-
+        num_example += 1
