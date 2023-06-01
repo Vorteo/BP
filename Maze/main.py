@@ -2,9 +2,12 @@ from pyMaze import maze, COLOR, agent
 import numpy as np
 import random
 import sys
+import tkinter as tk
+from tkinter import ttk
+from collections import deque
 
-MAZE_WIDTH = 20
-MAZE_HEIGHT = 20
+MAZE_WIDTH = 25
+MAZE_HEIGHT = 25
 
 # Start and goal position in maze
 START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
@@ -25,6 +28,78 @@ MOVES_OPTIONS = ['E', 'W', 'N', 'S']
 GENERATION_LIMIT = 2000
 
 PERCENT_LIMIT = 0.8
+
+
+root = tk.Tk()
+
+
+def start_button_clicked(entries):
+    global MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT, START_POSITION
+
+    variables = {
+        "MAZE_WIDTH": int(entries[0].get()),
+        "MAZE_HEIGHT": int(entries[1].get()),
+        "NUM_AGENTS": int(entries[2].get()),
+        "MUTATION_RATE": float(entries[4].get()),
+        "SELECTION_CUTOFF": float(entries[5].get()),
+        "GENERATION_LIMIT": int(entries[3].get()),
+    }
+
+    MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT = \
+        variables["MAZE_WIDTH"], variables["MAZE_HEIGHT"], \
+        variables["NUM_AGENTS"], variables["MUTATION_RATE"], variables["SELECTION_CUTOFF"], \
+        variables["GENERATION_LIMIT"]
+
+    START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
+
+    root.destroy()
+
+
+def create_window():
+    global root
+
+    root.title("Nastavení bludiště")
+
+    window_width = 410
+    window_height = 300
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x_coordinate = (screen_width / 2) - (window_width / 2)
+    y_coordinate = (screen_height / 2) - (window_height / 2)
+    root.geometry(f"{window_width}x{window_height}+{int(x_coordinate)}+{int(y_coordinate)}")
+    root.resizable(width=False, height=False)
+
+    padding_x = 10
+    padding_y = 5
+
+    style = ttk.Style()
+    style.configure("TEntry", padding=(padding_x, padding_y))
+    style.configure("TButton", padding=(padding_x, padding_y))
+
+    labels = ["Šířka bludiště:", "Výška bludiště:", "Velikost populace:", "Maximální počet generací:", "Mutatation rate:",
+              "Selection cutoff:"]
+    entries = []
+
+    val = [MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, GENERATION_LIMIT, MUTATION_RATE, SELECTION_CUTOFF]
+    default_values = list(map(str, val))
+
+    for i, label_text in enumerate(labels):
+        label = tk.Label(root, text=label_text, font=("Helvetica", 12))
+        label.grid(row=i, column=0, sticky=tk.W, padx=10, pady=5)
+
+        entry = tk.Entry(root, font=("Helvetica", 12))
+        entry.insert(0, default_values[i])
+        entry.grid(row=i, column=1, padx=10, pady=5)
+
+        entries.append(entry)
+
+    start_button = tk.Button(root, text="Spustit", command=lambda: start_button_clicked(entries), width=20, height=2,
+                             font=("Helvetica", 14), borderwidth=1, relief="ridge", bg="#adaaaa")
+
+    start_button.grid(row=len(labels), column=0, columnspan=2, pady=10)
+
+    root.mainloop()
+
 
 class Agent:
     def __init__(self):
@@ -155,7 +230,7 @@ class GeneticApplication:
 
                 # calculate fitness for every agent in generation
                 for a in self.agents:
-                    a.fitness += calculate_distance((a.x, a.y), GOAL_POSITION)
+                    a.fitness = bfs(self.maze.maze_map, (a.x, a.y), GOAL_POSITION)
 
                 sum_fitness = 0
                 for a in self.agents:
@@ -211,12 +286,25 @@ class GeneticApplication:
 
 
 # Functions
+def bfs(maze, start, target):
+    queue = deque([(start, 0)])
+    visited = set()
+    directions = {'N': (-1, 0), 'S': (1, 0), 'W': (0, -1), 'E': (0, 1)}
 
-# Distance function
-# Calculate distance function between agents position and goal position
-def calculate_distance(point1, point2):
-    dist = abs(point2[0] - point1[0]) + abs(point2[1] - point1[1])
-    return dist
+    while queue:
+        current, distance = queue.popleft()
+        if current == target:
+            return distance
+
+        visited.add(current)
+        x, y = current
+
+        for direction, (dx, dy) in directions.items():
+            next_cell = (x + dx, y + dy)
+            if next_cell in maze and next_cell not in visited and maze[current][direction] == 1:
+                queue.append((next_cell, distance + 1))
+
+    return 300
 
 
 # Crossover function
@@ -257,6 +345,7 @@ def mutate(array):
     else:
         return array
 
+
 # setup start parameters
 def update_variables():
     global MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT, START_POSITION
@@ -286,8 +375,9 @@ def update_variables():
 
     print("Variables updated successfully!")
 
+
 if __name__ == '__main__':
-    update_variables()
+    create_window()
 
     if "test" in sys.argv:
         solved_mazes = 0
@@ -311,7 +401,8 @@ if __name__ == '__main__':
                     print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
 
                     a = agent(genetic_app.maze, footprints=True)
-                    genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80)
+                    genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80, kill=True)
+                    genetic_app.maze.run()
 
                 print('Solved mazes: {}, number of mazes: {}'.format(solved_mazes, number_of_mazes))
                 print("\n")

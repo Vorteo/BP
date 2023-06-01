@@ -752,6 +752,8 @@ class maze:
                 self._canvas.delete(a._body[i])
             self._canvas.delete(a._head)
 
+            self._win.destroy()
+
         w = self._cell_width
         if ((a.x, a.y) in self.markCells and showMarked):
             w = self._cell_width
@@ -934,6 +936,9 @@ class maze:
             for a, p in d.items():
                 if a.goal != (a.x, a.y) and len(p) != 0:
                     self._tracePathSingle(a, p, kill, showMarked, delay)
+
+    def close_window(self):
+        self._win.destroy()
 
     def run(self):
         '''
