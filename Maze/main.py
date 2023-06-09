@@ -1,7 +1,6 @@
 from pyMaze import maze, COLOR, agent
 import numpy as np
 import random
-import sys
 import tkinter as tk
 from tkinter import ttk
 from collections import deque
@@ -29,8 +28,8 @@ GENERATION_LIMIT = 2000
 
 PERCENT_LIMIT = 0.8
 
-
 root = tk.Tk()
+test_val = tk.IntVar()
 
 
 def start_button_clicked(entries):
@@ -76,8 +75,8 @@ def create_window():
     style.configure("TEntry", padding=(padding_x, padding_y))
     style.configure("TButton", padding=(padding_x, padding_y))
 
-    labels = ["Šířka bludiště:", "Výška bludiště:", "Velikost populace:", "Maximální počet generací:", "Mutatation rate:",
-              "Selection cutoff:"]
+    labels = ["Šířka bludiště:", "Výška bludiště:", "Velikost populace:", "Maximální počet generací:",
+              "Mutatation rate:", "Selection cutoff:"]
     entries = []
 
     val = [MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, GENERATION_LIMIT, MUTATION_RATE, SELECTION_CUTOFF]
@@ -93,10 +92,14 @@ def create_window():
 
         entries.append(entry)
 
+    label1 = tk.Label(root, text="Test mode", font=("Helvetica", 12))
+    label1.grid(row=6, column=0, padx=10, pady=5)
+    ttk.Checkbutton(root, text="", variable=test_val).grid(row=6, column=1)
+
     start_button = tk.Button(root, text="Spustit", command=lambda: start_button_clicked(entries), width=20, height=2,
                              font=("Helvetica", 14), borderwidth=1, relief="ridge", bg="#adaaaa")
 
-    start_button.grid(row=len(labels), column=0, columnspan=2, pady=10)
+    start_button.grid(row=len(labels)+1, column=0, columnspan=2, pady=10)
 
     root.mainloop()
 
@@ -286,7 +289,10 @@ class GeneticApplication:
 
 
 # Functions
+
+# BFS function
 def bfs(maze, start, target):
+    # find the shortest path from start to target position and return distance as number of cells to target
     queue = deque([(start, 0)])
     visited = set()
     directions = {'N': (-1, 0), 'S': (1, 0), 'W': (0, -1), 'E': (0, 1)}
@@ -377,9 +383,12 @@ def update_variables():
 
 
 if __name__ == '__main__':
+    global test
     create_window()
 
-    if "test" in sys.argv:
+    test_mode = test_val.get()
+
+    if test_mode == 1:
         solved_mazes = 0
         number_of_mazes = 0
         
