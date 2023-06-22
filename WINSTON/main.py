@@ -43,7 +43,7 @@ class Agent:
         with open('model.csv', 'w') as file:
             write = csv.writer(file, delimiter=',')
             write.writerow(self.model)
-            print('The model has been successfully saved to the model.csv file\n')
+            print('Model byl uspesne ulozen do model.csv souboru\n')
 
     # load model from model.csv
     def load_model(self):
@@ -60,7 +60,7 @@ class Agent:
                 self.model.pop(len(self.model) - 1)
                 self.examples.remove(example)
 
-                print('First positive example found:')
+                print('Nalezeny prvni pozitivni priklad oblouku:')
                 print(self.model)
                 print("\n")
                 break
@@ -145,16 +145,15 @@ class Agent:
 
         print('Model: ')
         print(self.model)
-        print("")
 
-        print('Random test example:')
+        print('Nahodne vybrany priklad:')
         print(example)
         print('************************************************************')
-        print('Example should be: ' + example_result)
+        print('Priklad by mel byt: ' + example_result)
 
         model2 = self.model.copy()
 
-        for m in model2:
+        for m in self.model:
             if m.startswith('must-not-be-'):
                 if m[len('must-not-be-'):] in example:
                     return False
@@ -298,7 +297,7 @@ def main():
                     elif (
                             l1.property_value in agent.polygon or l1.property_value == 'polygon') and e_property_value not in agent.polygon:
                         agent.model = list(map(lambda x: x.replace(diff,
-                                                             'must-be-' + l1.property_name + ',' + l1.property_value + ' ∪ '
+                                                             'must-be-' + l1.property_name + ',' + l1.property_value + ' ; '
                                                              + e_property_value + ')'), agent.model))
 
                     elif find_exclude_values(l1, e_property_value):  # If the values in links are excluded
@@ -310,23 +309,17 @@ def main():
 
 if __name__ == '__main__':
     if os.path.isfile('model.csv'):
-        print('Model is already created')
+        print('Model je uz vytvoren.')
         agent.load_model()
     else:
         main()
-        print('A model was found!')
+        print('Model nalezen.')
         agent.save_model()
 
     # load data again for testing model
     agent.load_examples()
     # Testing the model to see if it identifies a random example as an arch or not
-    print('************************************************************')
-    print("Testing:")
-    print('************************************************************\n')
-
-    num_example = 1
     while agent.examples:
-        print(f"Test example number: {num_example}")
-        print(f"The agent identified the example as: {agent.test_model()}")
+        print(f"Priklad byl identifikovan jako: {agent.test_model()}")
         print('************************************************************\n\n')
-        num_example += 1
+
