@@ -4,6 +4,7 @@ import random
 import tkinter as tk
 from tkinter import ttk
 from collections import deque
+import threading
 
 MAZE_WIDTH = 25
 MAZE_HEIGHT = 25
@@ -13,7 +14,7 @@ START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
 GOAL_POSITION = (1, 1)
 
 # Max number of moves in maze and number of agents
-NUM_MOVES = MAZE_WIDTH * MAZE_HEIGHT
+NUM_MOVES = 625
 NUM_AGENTS = 1000
 
 # Mutation and Selection
@@ -24,7 +25,7 @@ SELECTION_CUTOFF = 0.1
 MOVES_OPTIONS = ['E', 'W', 'N', 'S']
 
 # Generation limit, stops the evaluation when more than GENERATION_LIMIT are created
-GENERATION_LIMIT = 2000
+GENERATION_LIMIT = 500
 
 PERCENT_LIMIT = 0.8
 
@@ -33,7 +34,7 @@ test_val = tk.IntVar()
 
 
 def start_button_clicked(entries):
-    global MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT, START_POSITION
+    global MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, MUTATION_RATE, SELECTION_CUTOFF, GENERATION_LIMIT, START_POSITION, NUM_MOVES
 
     variables = {
         "MAZE_WIDTH": int(entries[0].get()),
@@ -50,6 +51,7 @@ def start_button_clicked(entries):
         variables["GENERATION_LIMIT"]
 
     START_POSITION = (MAZE_WIDTH, MAZE_HEIGHT)
+    NUM_MOVES = MAZE_WIDTH * MAZE_HEIGHT
 
     root.destroy()
 
@@ -60,7 +62,7 @@ def create_window():
     root.title("Nastavení bludiště")
 
     window_width = 410
-    window_height = 300
+    window_height = 320
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     x_coordinate = (screen_width / 2) - (window_width / 2)
@@ -76,7 +78,7 @@ def create_window():
     style.configure("TButton", padding=(padding_x, padding_y))
 
     labels = ["Šířka bludiště:", "Výška bludiště:", "Velikost populace:", "Maximální počet generací:",
-              "Mutatation rate:", "Selection cutoff:"]
+              "Mutation rate:", "Selection cutoff:"]
     entries = []
 
     val = [MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, GENERATION_LIMIT, MUTATION_RATE, SELECTION_CUTOFF]
@@ -203,7 +205,8 @@ class GeneticApplication:
 
     # Generate random moves method
     @staticmethod
-    def generate_random_moves(turns=NUM_MOVES):
+    def generate_random_moves():
+        turns = NUM_MOVES
         return np.array(random.choices(MOVES_OPTIONS, k=turns))
 
     # method that sets up the next generation of agents and reset turn, increase generation counter
@@ -215,7 +218,7 @@ class GeneticApplication:
         for i, m in enumerate(moves_lists):
             self.agents[i].move_array = m
 
-        print(f"## {self.generation} generation created ##")
+        print(f"## {self.generation} generace vytvorena ##")
 
     # evaluate method that in loop perform move, calculate distance, perform selection, crossover,
     # mutation, next generation and  check if someone reach the goal
@@ -223,17 +226,19 @@ class GeneticApplication:
         while True:
             if self.turn == NUM_MOVES or max(a.can_walk for a in self.agents) is False:
                 if self.generation == GENERATION_LIMIT:
-                    print(f'No agent found its path through the maze in {GENERATION_LIMIT} generations')
+                    print(f'Zadny jedinec nenalezl cestu  bludistem behem {GENERATION_LIMIT} generaci')
                     break
 
                 sum_of_winners = len([i for i in genetic_app.agents if i.win is True])
                 if (sum_of_winners / NUM_AGENTS) > PERCENT_LIMIT:
-                    print('The agents found path through the maze')
+                    print('Jedinci nalezli cestu bludistem')
                     break
 
                 # calculate fitness for every agent in generation
                 for a in self.agents:
                     a.fitness = bfs(self.maze.maze_map, (a.x, a.y), GOAL_POSITION)
+
+                #calculate_fitness_parallel(self.agents, self.maze.maze_map)
 
                 sum_fitness = 0
                 for a in self.agents:
@@ -242,8 +247,8 @@ class GeneticApplication:
                 # sort agents by fitness
                 self.agents.sort(key=lambda x: x.fitness)
 
-                print(f'Best fitness of {self.generation} generation is {self.agents[0].fitness} and average'
-                      f' fitness of population is {sum_fitness / NUM_AGENTS:.3f}')
+                print(f'Nejlepsi fitness hodnota  {self.generation} generace je {self.agents[0].fitness} a prumerna'
+                      f' fitness hodnota populace je {sum_fitness / NUM_AGENTS:.3f}')
 
                 # stores all moves arrays from every agent for next generation
                 moves_list = []
@@ -289,6 +294,21 @@ class GeneticApplication:
 
 
 # Functions
+
+def calculate_fitness_parallel(agents, maze_map):
+    threads = []
+    for agent in agents:
+        t = threading.Thread(target=calculate_fitness, args=(agent, maze_map))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+
+def calculate_fitness(agent, maze_map):
+    agent.fitness = bfs(maze_map, (agent.x, agent.y), GOAL_POSITION)
+
 
 # BFS function
 def bfs(maze, start, target):
@@ -342,8 +362,7 @@ def mutate(array):
         indices = random.sample(range(total_elements), amount_to_mutate)
 
         for i in indices:
-            row = i // NUM_MOVES
-            column = i % NUM_MOVES
+            row, column = divmod(i, NUM_MOVES)
             current = array[row, column]
             array[row, column] = random.choice(MOVES_OPTIONS[MOVES_OPTIONS != current])
 
@@ -407,17 +426,17 @@ if __name__ == '__main__':
 
                     total_winners = len([i for i in genetic_app.agents if i.win is True])
                     print("\n")
-                    print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
+                    print('{0:.2f}% jedincu z populace nalezlo reseni'.format((total_winners / NUM_AGENTS) * 100))
 
                     a = agent(genetic_app.maze, footprints=True)
                     genetic_app.maze.tracePath({a: a_goal[0].visited_positions}, delay=80, kill=True)
                     genetic_app.maze.run()
 
-                print('Solved mazes: {}, number of mazes: {}'.format(solved_mazes, number_of_mazes))
+                print('Vyresenych bludist: {}, Pocet bludist: {}'.format(solved_mazes, number_of_mazes))
                 print("\n")
 
         except KeyboardInterrupt:
-            print("Exit program...")
+            print("Konec programu...")
             exit(0)
     else:
         genetic_app = GeneticApplication()
@@ -429,7 +448,7 @@ if __name__ == '__main__':
 
         if a_goal:
             total_winners = len([i for i in genetic_app.agents if i.win is True])
-            print('{0:.2f}% of agents reach goal destination'.format((total_winners / NUM_AGENTS) * 100))
+            print('{0:.2f}% jedincu z populace nalezlo reseni'.format((total_winners / NUM_AGENTS) * 100))
             print("\n")
 
             a = agent(genetic_app.maze, footprints=True)
