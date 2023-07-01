@@ -2,7 +2,9 @@ import csv
 import random
 import re
 import os.path
+import time
 import xml.etree.cElementTree as ET
+from draw import create_network, draw_network
 
 
 class Link:
@@ -20,7 +22,7 @@ class Link:
 class Agent:
     def __init__(self):
         self.model = []
-        self.polygon = ['pyramid', 'block', 'cylinder']
+        self.polygon = []
         self.exclude_link_dict = {}
         self.examples = []
 
@@ -34,6 +36,10 @@ class Agent:
                 values.append(e.text)
             self.exclude_link_dict[child.tag] = values
 
+        with open("polygon.csv", "r") as file:
+            d = file.read()
+        self.polygon = re.findall(r'polygon\((.*?)\)', d)
+
         with open("example.csv", "r") as file:
             reader = csv.reader(file, delimiter=',')
             self.examples = list(reader)
@@ -43,7 +49,7 @@ class Agent:
         with open('model.csv', 'w') as file:
             write = csv.writer(file, delimiter=',')
             write.writerow(self.model)
-            print('Model byl uspesne ulozen do model.csv souboru\n')
+            print('Model byl uspesne ulozen do souboru model.csv\n')
 
     # load model from model.csv
     def load_model(self):
@@ -51,6 +57,14 @@ class Agent:
             reader = csv.reader(f, delimiter=',')
             tmp = list(reader)
             self.model = tmp[0]
+
+    def print_model(self):
+        for i, el in enumerate(self.model):
+            if i < len(self.model) - 1:
+                print('\t' + el + ',')
+            else:
+                print('\t' + el)
+        print()
 
     # find first positive example, set as model
     def find_first_positive_example(self):
@@ -60,8 +74,9 @@ class Agent:
                 self.model.pop(len(self.model) - 1)
                 self.examples.remove(example)
 
-                print('Nalezeny prvni pozitivni priklad oblouku:')
-                print(self.model)
+                print("\n")
+                print('Byl nalezen prvni pozitivni priklad a nastaven jako vychozi model hypotezy:')
+                self.print_model()
                 print("\n")
                 break
 
@@ -92,13 +107,15 @@ class Agent:
         # diff1 and diff2 differences between both model and example, what is missing in one and other
         diff1, diff2 = self.compare_model_example(example)
         if diff2:
-            print('Required link:')
             for link in diff2:
                 self.model = list(map(lambda x: x.replace(link, 'must-be-' + link), self.model))
+            print('Required link: ')
+            agent.print_model()
         elif diff1:
-            print('Forbidden link:')
             for link in diff1:
                 self.model.append('must-not-be-' + link)
+            print('Forbidden link: ')
+            agent.print_model()
 
     # create number interval link
     def make_interval(self, l1, example):
@@ -143,11 +160,12 @@ class Agent:
         example_result = example[-1]
         example = example[:-1]
 
-        print('Model: ')
-        print(self.model)
+        print('Model hypotezy: ')
+        agent.print_model()
 
-        print('Nahodne vybrany priklad:')
-        print(example)
+        print('Testovaci priklad:')
+        for el in example:
+            print('\t' + el)
         print('************************************************************')
         print('Priklad by mel byt: ' + example_result)
 
@@ -161,6 +179,16 @@ class Agent:
                     model2.remove(m)
 
         for m in self.model:
+
+            if ';' in m:
+                link1, link2 = [Link(link[len('must-be-'):]) for link in m.split(';')]
+                for e in example:
+                    if link1.property_name in e:
+                        ex = Link(e)
+                        if link1.property_value == ex.property_value or link2.property_value == ex.property_value:
+                            model2.remove(m)
+                            break
+
             l1 = Link(m)
             l1.property_name = l1.property_name[len('must-be-'):]
             for e in example:
@@ -169,12 +197,14 @@ class Agent:
                     break
                 elif l1.property_name in e:
                     ex = Link(e)
-                    if '∪' in l1.property_value:
-                        values = l1.property_value.split('∪')
-                        if values[0] == ex.property_value or values[1] == ex.property_value:
-                            model2.remove(l1.link)
-                            break
-                    elif 'polygon' in l1.property_value:
+
+                   # if '∪' in l1.property_value:
+                    #    values = l1.property_value.split('∪')
+                     #   if values[0] == ex.property_value or values[1] == ex.property_value:
+                      #      model2.remove(l1.link)
+                       #     break
+
+                    if 'polygon' in l1.property_value:
                         if ex.property_value in agent.polygon:
                             model2.remove(l1.link)
                             break
@@ -254,8 +284,6 @@ def main():
         if 'false' in example:  # Negative example
             example = example[:-1]
             agent.specialization(example)  # Specialization
-            print(agent.model)
-            print('\n')
 
         elif 'true' in example:  # Positive example
             example = example[:-1]
@@ -267,19 +295,21 @@ def main():
                 miss = check_miss_link(l1, example)  # Check if there is a missing link in the example,which is in model
 
                 if miss:  # Drop link, Remove unnecessary link from the model
-                    print('Drop link:')
+                    print('Drop link: ')
                     agent.model.remove(diff)
+                    agent.print_model()
 
                 elif re.match('^\d+-\d+$', l1.property_value):  # Checking the link for the number interval
-                    print('Interval link')
+                    print('Interval link: ')
                     agent.edit_interval(l1, example)
+                    agent.print_model()
 
                 elif l1.property_value.isnumeric():  # If the model link contains a numeric value, make an interval
-                    print('Number link:')
+                    print('Number link: ')
                     agent.make_interval(l1, example)
+                    agent.print_model()
 
                 elif not miss:
-                    print('Generalize with tree, enlarge-list or remove:')
                     e_property_value = str()
                     for link in example:
                         if l1.property_name in link:
@@ -292,34 +322,55 @@ def main():
                             agent.model = list(
                                 map(lambda x: x.replace(diff, 'must-be-' + l1.property_name + ',' + 'polygon' + ')'),
                                     agent.model))
+                            print('Generalize with tree')
+                            agent.print_model()
 
-                    # IF they are not in a polygon, add a disjunction
+                    # If they are not in a polygon, add a disjunction
                     elif (
                             l1.property_value in agent.polygon or l1.property_value == 'polygon') and e_property_value not in agent.polygon:
-                        agent.model = list(map(lambda x: x.replace(diff,
-                                                             'must-be-' + l1.property_name + ',' + l1.property_value + ' ; '
-                                                             + e_property_value + ')'), agent.model))
+                       # agent.model = list(map(lambda x: x.replace(diff,
+                        #                                     'must-be-' + l1.property_name + ',' + l1.property_value + ' ; '
+                         #                                    + e_property_value + ')'), agent.model))
+                        rule = 'must-be-' + l1.link + ';' + 'must-be-' + l1.property_name + ',' + e_property_value + ')'
+                        agent.model = list(map(lambda x: x.replace(diff, rule), agent.model))
+                        print('Enlarge-set')
+                        agent.print_model()
 
                     elif find_exclude_values(l1, e_property_value):  # If the values in links are excluded
                         agent.model.remove(l1.link)
-
-                print(agent.model)
-                print('\n')
+                        print('Drop link')
+                        agent.print_model()
 
 
 if __name__ == '__main__':
     if os.path.isfile('model.csv'):
-        print('Model je uz vytvoren.')
+        print('Model je jiz vytvoren.')
         agent.load_model()
     else:
         main()
-        print('Model nalezen.')
+        print('Model hypotezy nalezen.')
         agent.save_model()
 
-    # load data again for testing model
-    agent.load_examples()
-    # Testing the model to see if it identifies a random example as an arch or not
-    while agent.examples:
-        print(f"Priklad byl identifikovan jako: {agent.test_model()}")
-        print('************************************************************\n\n')
+        draw_input = input("Chcete vykreslit pomoci semanticke site nalezenou hypotezu?(Ano/Ne): ")
+        if draw_input == "Ano":
+            network = create_network(agent.model)
+            draw_network(network)
+
+    test_input = input("Zadejte 'test' pro spusteni testovani hypotezy na prikladech nebo 'quit' k ukonceni programu: ")
+    print("\n")
+
+    if test_input == "test":
+        print("Spustil se testovaci rezim...\n")
+        # load data again for testing model
+        agent.load_examples()
+        # Testing the model to see if it identifies a random example as an arch or not
+        while agent.examples:
+            print(f"Priklad byl identifikovan jako: {agent.test_model()}")
+            print('************************************************************\n\n')
+            time.sleep(2)
+
+    elif test_input == "quit":
+        print("Ukoncuje se program...")
+        exit()
+
 
