@@ -78,7 +78,7 @@ def create_window():
     style.configure("TButton", padding=(padding_x, padding_y))
 
     labels = ["Šířka bludiště:", "Výška bludiště:", "Velikost populace:", "Maximální počet generací:",
-              "Mutation rate:", "Selection cutoff:"]
+              "Míra mutace:", "Mez selekce:"]
     entries = []
 
     val = [MAZE_WIDTH, MAZE_HEIGHT, NUM_AGENTS, GENERATION_LIMIT, MUTATION_RATE, SELECTION_CUTOFF]
@@ -94,7 +94,7 @@ def create_window():
 
         entries.append(entry)
 
-    label1 = tk.Label(root, text="Test mode", font=("Helvetica", 12))
+    label1 = tk.Label(root, text="Testovací režim", font=("Helvetica", 12))
     label1.grid(row=6, column=0, padx=10, pady=5)
     ttk.Checkbutton(root, text="", variable=test_val).grid(row=6, column=1)
 
