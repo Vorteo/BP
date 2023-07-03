@@ -5,13 +5,4 @@
 		<color>black</color>
 		<color>yellow</color>
 	</color-pillar1>
-	<shape-roof>
-	    <shape>sphere</shape>
-	</shape-roof>
-	<shape-pillar1>
-	    <shape>sphere</shape>
-	</shape-pillar1>
-	<shape-pillar2>
-	    <shape>sphere</shape>
-	</shape-pillar2>
 </exclude_links>

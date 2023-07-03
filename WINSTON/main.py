@@ -342,6 +342,7 @@ def main():
                         agent.print_model()
 
 
+
 if __name__ == '__main__':
     if os.path.isfile('model.csv'):
         print('Model je jiz vytvoren.')
