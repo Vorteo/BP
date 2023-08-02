@@ -1,0 +1,114 @@
+1)
+Dobrý den, jmenuji se Martin Kaleta a rád bych Vám dnes představil moji bakalářskou práci na téma Srovnání paradigmat strojového učení.
+
+2)
+Postupně bych vás provedl výše uvedenými body osnovy.
+
+3)
+Jako první bych vás seznámil s jednotlivými cíli bakalářské práce.
+
+Moje práce se jako celek skládá ze dvou hlavních částí - Teoretické částí a Ppřípadové studie.
+
+Cílem teoretické části bylo provést základní shrnutí teorie strojového učení v multiagetních systémech
+
+Následně na to navázat shrnutím 4 základních paradigmat strojového učení - 
+
+Cílem teoretické části bylo provést základní shrnutí teorie strojového učení v multiagentních systémech.
+
+Čtenáře seznámit s tím co je to MAS, agent, strojové učení, základní přístupy strojového učení atd.
+
+Následně na to navázat shrnutím 4 základních paradigmat strojového učení.
+
+Jedná se o symbolickou reprezentaci znalostí, genetické algoritmy, pravděpodobnost a umělé neuronové sítě.
+
+Druhou částí práce je případová studie jejíž cílem byla implementace 2 algoritmů založených na vybraných paradigmatech.
+
+Konkrétně tedy algoritmus založený na symbolické reprezentaci znalostí a druhý na základě genetických algoritmů. 
+
+Následně na základě těchto algoritmů provést porovnání z hlediska jejich přístupů a funkcionality. (výhody / nevýhody)
+
+
+4)
+V této části bych se věnoval krátkému popisu případové studie, konkrétně jednotlivým algoritmům.
+
+Prvním implementovaným algoritmem byl Winstonův algoritmus založený na symbolické reprezentaci znalostí, který vytváří obecnou hypotézu podle konceptů (příkladů).
+
+Jeho úkolem je vytvořit obecnou hypotézu/model, která bude správně identifikovat, klasifikovat různé koncepty.
+
+V případě této práce identifikovat reprezentace tvaru oblouku.
+
+K vytvoření obecné hypotézy identifikující oblouk je potřeba sada trénovacích příkladů, pomocí které se naučí rozpoznávat oblouk.
+
+Trénovací sada příkladů popisuje příklady oblouků a skoro oblouků (pozitivní a negativní příklady), které jsou definovány pomocí jednoduchých klauzulí jazyka Prolog.
+
+
+Princip algoritmu je takový, že na vstupu příjme sadu trénovacích dat, ze kterých vybere první pozitivní příklad oblouku a ten nastaví jako svou počáteční hypotézu (model hypotézy).
+
+Následně prochází postupně jednotlivé trénovací příklady a provádí nad modelem hypotézy operace Generalizace a specializace, na základě toho, jestli mu byl poskytnut oblouk nebo skoro oblouk a rozdílů mezi modelem hypotézy a předloženým příkladem.
+
+Hypotéza je na závěr ukládaná do souboru a otestována vůči testovacím příkladům.
+
+
+6)
+Druhým algoritmem je algoritmus hledající cestu v bludišti, který je založený na přístupu genetických algoritmů.
+
+Jeho cílem je nalézt cestu mezi startovní a cílovou pozicí ve čtvercovém bludišti.
+
+K vytvoření bludiště a vizualizaci slouží modul Pyamaze. 
+
+Základem algoritmu je populace jedinců, kde každý jedinec má svůj chromozom, který je ve formě seznamu kroků, kterými se po bludišti pohybuje.
+
+V počáteční fází jsou seznamy kroků náhodně vygenerovány pro všechny jedince.
+
+Jedinci se následně snaží procházet bludiště a najít cílovou pozici.
+
+Pokud jedinec narazí do zdi, tak se zastaví a ukončí svoji činnost. Pokud se však pokusí přejít na pozici, kterou již dříve navštívil, tak se pokusí jít směrem, kterým ještě nešel nebo se zastaví.
+
+Tímto je docíleno, že se jedinci snaží, co nejvíce prozkoumávat bludiště.
+
+V momentě, kdy se celá populace jedinců zastaví, tak proběhne ohodnocení jednotlivých jedinců na základě fitness funkce a vytvoření nové generace jedinců (potomků) pomocí operací selekce, křížení a mutace.
+
+Fitness funkce ohodnotí jednotlivé jedince podle toho, jak blízko se dostali k cílové pozici. (počet dílků, které je potřeba projít z aktuální pozice)
+
+Na základě fitness hodnoty jsou z populace selektováni lepší jedinci ke křížení a vytvoření jedince složeného z lepšího a horšího jedince.
+
+Na závěr probíhá mutace, která náhodně upraví některé kroky v seznamů kroků vybraných jedinců.
+
+Proces hledání se dále opakuje dokud x% jedinců nenajde cestu.
+
+Výsledná cesta je na závěr vykreslena na obrazovku.
+
+
+8)
+V závěru bych tedy shrnul výsledky případové studie popřípadě celé práce.
+
+Byly naimplementovány a popsány na ilustrativních příkladech oba dříve uvadené algoritmy. 
+
+Na závěr případové studie došlo k porovnání algoritmů z hlediska k přístupů a funkcionality.
+
+Zde na tomto snímku uvádím v tabulce několik výhod a nevýhod obou přístupů rozdělených do sloupců.
+
+Mezi výhody učení se symbolickou reprezentací znalostí je její jednoduchá interpretovatelnost. 
+
+Jednoduchá čitelnost, pochopitelnost dat a mechanismů, které probíhají při učení.
+
+Data jsou popsány pomocí symbolů, logických vztahů a podobně (TIL, Prolog, ...)
+
+Mezi nevýhody patří jejich citlivost na špatně navhnutá trénovací data, jsou závislé na pořadí.
+
+Pokud data nejsou vhodně navržena, tak může nastavat přílišná generalizace nebo specializace.
+
+Model bude špatně naučen, identifikovat špatné.
+
+Ted bych se přesunul k genetickým algoritmům, kdy mezi jejich výhody patří optimalizace, optimalizační úlohy (hledání optimálních parametrů), Procházení široké množiny možných řešení.
+
+Dále mezi výhodu lze zařadit paralelizace genetických algoritmů, tím zefektivnit činnost genetického algoritmu při hledání řešení procházením širší množiny řešení.
+
+Mezi zásadní nevýhody však patří časová a výpočetní náročnost. Čím více dat, jedinců v populaci, tím je potřeba provádět více operací.
+
+Další nevýhodou často bývá nutnost navržení vhodné fitness funkce k danému problému. To může být v mnoha případech složitý proces.
+
+Dále horší interpretovatelnost v porovnání se symbolickou reprezentací a GA nejsou vždy nejvhodnějším způsobem řešení daného problému.
+
+Existují algoritmy, které jsou konkrétně navrženy k efektivnímu řešení daných problemů.
+
